@@ -200,8 +200,10 @@ def main_threading(srr_name, run_info):
         print("Finish: {} (Use {} seconds)".format(srr_name, round(time.time() - run_info["first_time"], 2)))
     except Exception as e:
         print("Error(main_threading of {}): {}".format(srr_name, e))
-        time.sleep(5)
-        return main_threading(srr_name, run_info)
+        error_code = e.args[0].split(" ", 1)[0]
+        if error_code != "450":
+            time.sleep(5)
+            return main_threading(srr_name, run_info)
 
 class ftpFileDownloadThread(threading.Thread):
     def __init__(self, run_item):
@@ -261,8 +263,8 @@ def ftpFileDownload(srrUrl_dict_items, output_dir, maxThreadNum, timeoutLen=30, 
 #
 # download settings#######
 
-output_dir = "D:/scRNAseqData/ncbi_spider_20180731"
-allDatasets = ["GSE63473", "GSE110823", "GSE46980", "GSE99330", "GSE87544", "GSE102827", "GSE114397"]
+output_dir = "D:/scRNAseqData/ncbi_spider_20180730"
+allDatasets = ["GSE82187", "GSE92332"]
 #just_summary = True
 just_summary = False
 #
