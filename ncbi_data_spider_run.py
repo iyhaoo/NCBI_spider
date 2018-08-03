@@ -70,7 +70,7 @@ def request_list(request_key, numFound, timeoutLen=30):
         return return_df
     except Exception as e:
         print("Error(request_summary): {}".format(e))
-        return request_summary(request_key, numFound, timeoutLen)
+        return request_list(request_key, numFound, timeoutLen)
 
 def srx_request_worker(srx):
     request_type, request_key = grab_requset_key(srx)
@@ -263,10 +263,14 @@ def ftpFileDownload(srrUrl_dict_items, output_dir, maxThreadNum, timeoutLen=30, 
 #
 # download settings#######
 
-output_dir = "D:/scRNAseqData/ncbi_spider_20180730"
-allDatasets = ["GSE82187", "GSE92332"]
-#just_summary = True
-just_summary = False
+output_dir = "D:/scRNAseqData/ncbi_spider_20180731"
+allDatasets = ["GSE42268","GSE45719","GSE76483","GSE47835","GSE52583","GSE55291","GSE57249","GSE60297","GSE60361","GSE60768",
+               "GSE61470","GSE63576","GSE64960","GSE65525","GSE66202","GSE70844","GSE75107","GSE75108","GSE75109","GSE75110",
+               "GSE75111","GSE74923","GSE67120","GSE79510","GSE70605","GSE81682","GSE66578","GSE74596","GSE77029","GSE65924",
+               "GSE70657", "GSE81682","GSE66578","GSE74596","GSE77029","GSE65924","GSE70657", "GSE75748", "GSE63473", "GSE110823",
+               "GSE46980", "GSE99330", "GSE87544", "GSE102827", "GSE114397"]
+just_summary = True
+#just_summary = False
 #
 #
 #
