@@ -66,7 +66,7 @@ def request_list(request_key, numFound, timeoutLen=30):
         p.join()
         return_df = pd.DataFrame()
         for result in result_list:
-            return_df = result.get() if return_df.empty else return_df.append(result.get(), sort=True)
+            return_df = result.get() if return_df.empty else return_df.append(result.get())
         return return_df
     except Exception as e:
         print("Error(request_summary): {}".format(e))
@@ -100,7 +100,7 @@ def get_srr_info_from_geo(dataset, maxThreadNum, timeoutLen):
     p.join()
     srx_all_df = pd.DataFrame()
     for result in result_list:
-        srx_all_df = result.get() if srx_all_df.empty else srx_all_df.append(result.get(), sort=True)
+        srx_all_df = result.get() if srx_all_df.empty else srx_all_df.append(result.get())
     return srx_all_df
 
 def just_make_summary(dataset, maxThreadNum=10, timeoutLen=30):
