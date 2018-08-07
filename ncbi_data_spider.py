@@ -55,18 +55,12 @@ def request_list(request_key, numFound, timeoutLen=30):
     try:
         url = "https://trace.ncbi.nlm.nih.gov/Traces/study/proxy/run_selector.cgi?wt=json&indent=true&omitHeader=true&"
         nrows = 50
-        p = Pool(maxThreadNum)
-        result_list = []
+        return_df = pd.DataFrame()
         for ii in range(int(1 + numFound // nrows)):
             data = 'start={}&rows={}&fl=Run_s, BioSample_s, Sample_Name_s, DATASTORE_filetype_ss, AssemblyName_s, Experiment_s, Instrument_s, LibrarySelection_s, LoadDate_s, MBases_l, MBytes_l, SRA_Sample_s, cell_line_s, tissue_s&q=recordset:"{}"&sort=Run_s desc'.format(ii * nrows, nrows, request_key)
             req = urllib.request.Request(url=url, data=data.encode('utf-8'), method='POST')
-            result = p.apply_async(request_list_worker, kwds={"req": req, "timeoutLen": timeoutLen})
-            result_list.append(result)
-        p.close()
-        p.join()
-        return_df = pd.DataFrame()
-        for result in result_list:
-            return_df = result.get() if return_df.empty else return_df.append(result.get())
+            return_df = request_list_worker(req, timeoutLen) if return_df.empty else return_df.append(request_list_worker(req, timeoutLen))
+            print("Extracted {}/{}".format(min(ii * nrows + nrows, numFound), numFound))
         return return_df
     except Exception as e:
         print("Error(request_summary): {}".format(e))
@@ -200,8 +194,11 @@ def main_threading(srr_name, run_info):
         print("Finish: {} (Use {} seconds)".format(srr_name, round(time.time() - run_info["first_time"], 2)))
     except Exception as e:
         print("Error(main_threading of {}): {}".format(srr_name, e))
-        error_code = e.args[0].split(" ", 1)[0]
-        if error_code != "450":
+        try:
+            error_code = e.args[0].split(" ", 1)[0]
+            if error_code == "450":
+                return  # no file
+        except:
             time.sleep(5)
             return main_threading(srr_name, run_info)
 
