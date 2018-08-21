@@ -179,8 +179,8 @@ def main_threading(srr_name, run_info):
                 f.close()
                 run_info["finLen"] += len(run_info["cache"])
                 use_time_once = max(time.time() - run_info["last_time"], 1e-8)
-                print("wrinting {}\t{:.2%}\tSpeed: {}k/s"
-                      .format(file_path,
+                print("wrinting {}\t{}/{} ({:.2%})\tSpeed: {}k/s"
+                      .format(file_path, run_info["finLen"], run_info["dataLen"],
                               run_info["finLen"] / run_info["dataLen"],
                               round(len(run_info["cache"]) / (1000 * use_time_once), 2)))
                 run_info["cache"] = ""
