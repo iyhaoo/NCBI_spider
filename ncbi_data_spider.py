@@ -204,6 +204,9 @@ def main_threading(srr_name, run_info):
             elif error_code == "530":
                 time.sleep(60)
                 return main_threading(srr_name, run_info)
+            else:
+                time.sleep(5)
+                return main_threading(srr_name, run_info)
         except:
             time.sleep(5)
             return main_threading(srr_name, run_info)
