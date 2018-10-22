@@ -46,10 +46,14 @@ def request_summary(request_key, request_type, timeoutLen=30):
         return request_summary(request_key, request_type, timeoutLen)
 
 def request_list_worker(req, timeoutLen):
-    with urllib.request.urlopen(req, timeout=timeoutLen) as urlOpen:
-        response = urlOpen.read()
-        return_dict = json.loads(str(response, encoding="utf-8"))
-    return pd.DataFrame.from_dict(return_dict["response"]["docs"])
+    try:
+        with urllib.request.urlopen(req, timeout=timeoutLen) as urlOpen:
+            response = urlOpen.read()
+            return_dict = json.loads(str(response, encoding="utf-8"))
+        return pd.DataFrame.from_dict(return_dict["response"]["docs"])
+    except Exception as e:
+        print("Error(request_list_worker): {}".format(e))
+        return request_list_worker(req, timeoutLen)
 
 def request_list(request_key, numFound, timeoutLen=30):
     try:
@@ -63,7 +67,7 @@ def request_list(request_key, numFound, timeoutLen=30):
             print("Extracted {}/{}".format(min(ii * nrows + nrows, numFound), numFound))
         return return_df
     except Exception as e:
-        print("Error(request_summary): {}".format(e))
+        print("Error(request_list): {}".format(e))
         return request_list(request_key, numFound, timeoutLen)
 
 def srx_request_worker(srx):
@@ -93,8 +97,12 @@ def get_srr_info_from_geo(dataset, maxThreadNum, timeoutLen):
     p.close()
     p.join()
     srx_all_df = pd.DataFrame()
-    for result in result_list:
+    numFound = len(result_list)
+    for ii, result in enumerate(result_list):
         srx_all_df = result.get() if srx_all_df.empty else srx_all_df.append(result.get())
+        extracted_num = ii + 1
+        if extracted_num % 50 == 0 or extracted_num == len(result_list):
+            print("Extracted {}/{}".format(extracted_num, numFound))
     return srx_all_df
 
 def just_make_summary(dataset, maxThreadNum=10, timeoutLen=30):
@@ -270,8 +278,8 @@ def ftpFileDownload(srrUrl_dict_items, output_dir, maxThreadNum, timeoutLen=30, 
 #
 # download settings#######
 
-output_dir = "E:/single_cell_data/ncbi_spider_20180911"
-allDatasets = ["SRP139878", "SRP080870", "GSE53638", "GSE54006", "GSE92495"]
+output_dir = "E:/single_cell_data/ncbi_spider_20181022"
+allDatasets = ["GSE96772", "GSE110513", "GSE75478"]
 #just_summary = True
 just_summary = False
 #
