@@ -8,8 +8,8 @@ requirements = [
 ]
 
 setup(
-    name="ncbi_spider",
-    version="0.0.2",
+    name="ncbispider",
+    version="0.0.1",
     author="Hao Yuan",
     author_email="904469382@qq.com",
     description="",
@@ -24,7 +24,7 @@ setup(
     ],
     entry_points={
         'console_scripts': [
-            'ncbi_spider = ncbi_spider.__main__:main'
+            'ncbispider = ncbispider.__main__:main'
         ]},
     #python_requires='>=3.6',
 )
