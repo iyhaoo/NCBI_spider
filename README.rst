@@ -21,7 +21,7 @@ Installation
 
     git clone git://github.com/iyhaoo/NCBI_spider.git
 
-    cd NCBI_spider
+    cd ncbi_spider
 
     python setup.py install
 
