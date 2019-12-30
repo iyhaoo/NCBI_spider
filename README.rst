@@ -14,7 +14,7 @@ Installation
 **Install NCBI_spider with pip**
   To install with ``pip``, run the following from a terminal::
 
-    pip install NCBI_spider
+    pip install ncbi-spider
 
 **Install NCBI_spider from GitHub**
   To clone the repository and install manually, run the following from a terminal::
