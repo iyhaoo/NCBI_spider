@@ -14,7 +14,7 @@ setup(
     author_email="904469382@qq.com",
     description="",
     install_requires=requirements,
-    url="https://github.com/iyhaoo/DISC",
+    url="https://github.com/iyhaoo/NCBI_spider",
     packages=find_packages(),
     license='Apache License 2.0',
     classifiers=[

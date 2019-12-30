@@ -4,7 +4,7 @@ NCBI_spider
 |PyPI|
 
 .. |PyPI| image:: https://img.shields.io/pypi/v/NCBI_spider.svg
-    :target: https://pypi.org/project/ncbi_spider
+    :target: https://pypi.org/project/ncbi-spider
 
 * Free software: Apache License 2.0
 

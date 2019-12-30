@@ -8,6 +8,8 @@ import pandas as pd
 import gzip
 from multiprocessing import Pool
 import threading
+import argparse
+
 
 def grab_requset_key(request_data, timeoutLen=30, retry=0):
     try:
@@ -107,7 +109,7 @@ def get_srr_info_from_geo(dataset, maxThreadNum, timeoutLen):
             print("Extracted {}/{}".format(extracted_num, numFound))
     return srx_all_df
 
-def just_make_summary(dataset, maxThreadNum=10, timeoutLen=30):
+def just_make_summary(dataset, output_dir, maxThreadNum, timeoutLen):
     request_type, request_key = grab_requset_key(dataset, timeoutLen)
     if request_key == "NA":
         srx_all_df = get_srr_info_from_geo(dataset, maxThreadNum, timeoutLen)
@@ -120,7 +122,7 @@ def just_make_summary(dataset, maxThreadNum=10, timeoutLen=30):
         f.write(out_summary)
     print("Extracted {} summary".format(dataset))
 
-def checkpoint_make_or_load_srrUrl(dataset, tmp_dir, maxThreadNum=10, timeoutLen=30):
+def checkpoint_make_or_load_srrUrl(dataset, tmp_dir, output_dir, maxThreadNum, timeoutLen):
     srrUrl_file = "{}/{}_srrs.tsv".format(tmp_dir, dataset)
     srrUrl_list = []
     if os.path.exists(srrUrl_file):
@@ -232,7 +234,7 @@ class ftpFileDownloadThread(threading.Thread):
         run_info["first_time"] = run_info["last_time"]
         main_threading(srr_name, run_info)
 
-def ftpFileDownload(srrUrl_dict_items, output_dir, maxThreadNum, timeoutLen=30, cacheLen=512000):
+def ftpFileDownload(srrUrl_dict_items, output_dir, maxThreadNum, timeoutLen, cacheLen):
     log_dir = "{}/tmp/downloadLog".format(output_dir)
     dataset, srrUrl_list = srrUrl_dict_items
     run_info_dict = {}
@@ -266,54 +268,38 @@ def ftpFileDownload(srrUrl_dict_items, output_dir, maxThreadNum, timeoutLen=30, 
         thisThread.start()
 
 
-
-
-
-
-
-
-
-#
-#
-#
-#
-#
-# download settings#######
-
-output_dir = "E:/single_cell_data/ncbi_spider_20181022"
-allDatasets = ["GSE96772", "GSE110513", "GSE75478"]
-#just_summary = True
-just_summary = False
-#
-#
-#
-#
-#
-#  settings#######
-maxThreadNum = 10
-timeoutLen = 30
-cacheLen = 512000
-#  settings_end###
-#
-#
-#
-#
-#
-if __name__ == '__main__':
-    if just_summary:
-        os.makedirs(output_dir, exist_ok=True)
-        for dataset in allDatasets:
-            just_make_summary(dataset, maxThreadNum, timeoutLen)
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--dataset", required=True, type=str, help="GSE96772,GSE110513,GSE75478")
+    parser.add_argument("--out-dir", required=True, type=str, help="output folder")
+    parser.add_argument("--just-summary", required=False, type=bool, default=False, help="")
+    parser.add_argument("--maxThreadNum", required=False, type=int, default=10, help="")
+    parser.add_argument("--timeoutLen", required=False, type=int, default=30, help="")
+    parser.add_argument("--cacheLen", required=False, type=int, default=512000, help="")
+    FLAGS = vars(parser.parse_args())
+    print("Dataset: {}".format(FLAGS["dataset"]))
+    print("Output Dir: {}".format(FLAGS["out_dir"]))
+    if FLAGS["just_summary"]:
+        os.makedirs(FLAGS["out_dir"], exist_ok=True)
+        for dataset in FLAGS["dataset"]:
+            just_make_summary(dataset, FLAGS["out_dir"], FLAGS["maxThreadNum"], FLAGS["timeoutLen"])
     else:
-        tmp_dir = output_dir + "/tmp"
+        tmp_dir = FLAGS["out_dir"] + "/tmp"
         os.makedirs(tmp_dir, exist_ok=True)
-        print("Dest_dir: {}".format(output_dir))
         srrUrl_dict = {}
-        for index, dataset in enumerate(allDatasets):
-            output_dataset_dir = "{}/{}".format(output_dir, dataset)
+        for index, dataset in enumerate(FLAGS["dataset"]):
+            output_dataset_dir = "{}/{}".format(FLAGS["out_dir"], dataset)
             os.makedirs(output_dataset_dir, exist_ok=True)
-            srrUrl_dict[dataset] = checkpoint_make_or_load_srrUrl(dataset, tmp_dir, maxThreadNum, timeoutLen)
-        file_thread_dict = {}
+            srrUrl_dict[dataset] = checkpoint_make_or_load_srrUrl(dataset, tmp_dir, FLAGS["out_dir"], FLAGS["maxThreadNum"], FLAGS["timeoutLen"])
         for srrUrl_dict_items in srrUrl_dict.items():
-            ftpFileDownload(srrUrl_dict_items, output_dir, maxThreadNum, timeoutLen, cacheLen)
+            ftpFileDownload(srrUrl_dict_items, FLAGS["out_dir"], FLAGS["maxThreadNum"], FLAGS["timeoutLen"], FLAGS["cacheLen"])
+
+
+if __name__ == "__main__":
+    main()
+
+
+
+
+
 
