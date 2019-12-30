@@ -277,17 +277,18 @@ def main():
     parser.add_argument("--timeoutLen", required=False, type=int, default=30, help="")
     parser.add_argument("--cacheLen", required=False, type=int, default=512000, help="")
     FLAGS = vars(parser.parse_args())
-    print("Dataset: {}".format(FLAGS["dataset"]))
+    dataset_list = FLAGS["dataset"].split(",")
+    print("Dataset: {}".format(dataset_list))
     print("Output Dir: {}".format(FLAGS["out_dir"]))
     if FLAGS["just_summary"]:
         os.makedirs(FLAGS["out_dir"], exist_ok=True)
-        for dataset in FLAGS["dataset"]:
+        for dataset in dataset_list:
             just_make_summary(dataset, FLAGS["out_dir"], FLAGS["maxThreadNum"], FLAGS["timeoutLen"])
     else:
         tmp_dir = FLAGS["out_dir"] + "/tmp"
         os.makedirs(tmp_dir, exist_ok=True)
         srrUrl_dict = {}
-        for index, dataset in enumerate(FLAGS["dataset"]):
+        for index, dataset in enumerate(dataset_list):
             output_dataset_dir = "{}/{}".format(FLAGS["out_dir"], dataset)
             os.makedirs(output_dataset_dir, exist_ok=True)
             srrUrl_dict[dataset] = checkpoint_make_or_load_srrUrl(dataset, tmp_dir, FLAGS["out_dir"], FLAGS["maxThreadNum"], FLAGS["timeoutLen"])
