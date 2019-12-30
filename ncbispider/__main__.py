@@ -89,7 +89,7 @@ def soft_gz_request(soft_url, timeoutLen):
 
 def get_srr_info_from_geo(dataset, maxThreadNum, timeoutLen):
     print("get_srr_info_from_geo")
-    soft_url = "ftp://ftp.ncbi.nlm.nih.gov/geo/series/{}nnn/{}/soft/{}_family.soft.gz".format(dataset[0:len(dataset) - 3], dataset, dataset)
+    soft_url = "https://ftp.ncbi.nlm.nih.gov/geo/series/{}nnn/{}/soft/{}_family.soft.gz".format(dataset[0:len(dataset) - 3], dataset, dataset)
     soft_gz = soft_gz_request(soft_url, timeoutLen)
     srx_list = [x.rsplit("=", 1)[1] for x in re.findall('(?<=!Sample_relation = SRA: ).+?SRX[0-9]+?(?=\n)', soft_gz)]
     p = Pool(maxThreadNum)

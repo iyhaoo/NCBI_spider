@@ -9,7 +9,7 @@ requirements = [
 
 setup(
     name="ncbispider",
-    version="0.0.2",
+    version="0.0.3",
     author="Hao Yuan",
     author_email="904469382@qq.com",
     description="",
