@@ -29,4 +29,4 @@ Usage
 -----
 Run NCBI_spider::
 
-  "ncbi-spider" --dataset="GSE109762,GSE124557" --out-dir=E:/monkey_single_cell/ChIP
+  ncbi-spider --dataset="GSE109762,GSE124557" --out-dir=E:/monkey_single_cell/ChIP
