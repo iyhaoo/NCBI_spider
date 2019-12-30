@@ -3,74 +3,12 @@ import os
 import time
 import re
 from ftplib import FTP
-import json
 import pandas as pd
 import gzip
 from multiprocessing import Pool
 import threading
 import argparse
 
-
-def grab_requset_key(request_data, timeoutLen=30, retry=0):
-    try:
-        request_type = re.search('[a-zA-Z]+?(?=[0-9])', request_data).group(0).lower()
-        with urllib.request.urlopen("https://trace.ncbi.nlm.nih.gov/Traces/study/?acc=" + request_data, timeout=timeoutLen) as urlOpen:
-            response = urlOpen.read()
-            search_result = re.search('(?<=RESULT={key:")[\w]+?(?=", mode:"run"})', str(response, encoding="utf-8"))
-        if search_result:
-            return request_type, search_result.group(0)
-        else:
-            if request_type == "gse":
-                return request_type, "NA"
-            else:
-                print("Cannot find request key of {}, retry ...".format(request_data))
-                return grab_requset_key(request_data, timeoutLen, retry - 1)
-    except Exception as e:
-        print("Error(grab_requset_key): {}".format(e))
-        return grab_requset_key(request_data)
-
-def request_summary(request_key, request_type, timeoutLen=30):
-    try:
-        if request_type == "srx":
-            data = "stats=true&start=0&rows=1&fl=Assay_Type_s,AvgSpotLen_l,BioProject_s,BioSample_s,Center_Name_s,Consent_s,DATASTORE_filetype_ss,DATASTORE_provider_ss,Experiment_s,InsertSize_l,Instrument_s,LibraryLayout_s,LibrarySelection_s,LibrarySource_s,LoadDate_s,MBases_l,MBytes_l,Organism_s,Platform_s,ReleaseDate_s,Run_s,SRA_Sample_s,SRA_Study_s,Sample_Name_s,age_s,genotype_variation_s,source_name_s,strain_background_s,tissue_s&q=recordset:" + request_key
-        else:
-            data = "stats=true&start=0&rows=1&fl=Assay_Type_s,AvgSpotLen_l,BioProject_s,BioSampleModel_s,Center_Name_s,Consent_s,DATASTORE_provider_ss,InsertSize_l,LibraryLayout_s,LibrarySource_s,Organism_s,Platform_s,ReleaseDate_s,SRA_Study_s,age_s,biomaterial_provider_s,isolate_s,sex_s&q=recordset:" + request_key + "&stats.field=MBases_l&stats.field=MBytes_l"
-        url = "https://trace.ncbi.nlm.nih.gov/Traces/study/proxy/run_selector.cgi?wt=json&indent=true&omitHeader=true&"
-        req = urllib.request.Request(url=url, data=data.encode('utf-8'), method='POST')
-        with urllib.request.urlopen(req, timeout=timeoutLen) as urlOpen:
-            response = urlOpen.read()
-            return_dict = json.loads(str(response, encoding="utf-8"))
-            numFound = return_dict["response"]["numFound"]
-            return_df = pd.DataFrame.from_dict(return_dict["response"]["docs"])
-        return numFound, return_df
-    except Exception as e:
-        print("Error(request_summary): {}".format(e))
-        return request_summary(request_key, request_type, timeoutLen)
-
-def request_list_worker(req, timeoutLen):
-    try:
-        with urllib.request.urlopen(req, timeout=timeoutLen) as urlOpen:
-            response = urlOpen.read()
-            return_dict = json.loads(str(response, encoding="utf-8"))
-        return pd.DataFrame.from_dict(return_dict["response"]["docs"])
-    except Exception as e:
-        print("Error(request_list_worker): {}".format(e))
-        return request_list_worker(req, timeoutLen)
-
-def request_list(request_key, numFound, timeoutLen=30):
-    try:
-        url = "https://trace.ncbi.nlm.nih.gov/Traces/study/proxy/run_selector.cgi?wt=json&indent=true&omitHeader=true&"
-        nrows = 50
-        return_df = pd.DataFrame()
-        for ii in range(int(1 + numFound // nrows)):
-            data = 'start={}&rows={}&fl=Run_s, BioSample_s, Sample_Name_s, DATASTORE_filetype_ss, AssemblyName_s, Experiment_s, Instrument_s, LibrarySelection_s, LoadDate_s, MBases_l, MBytes_l, SRA_Sample_s, cell_line_s, tissue_s&q=recordset:"{}"&sort=Run_s desc'.format(ii * nrows, nrows, request_key)
-            req = urllib.request.Request(url=url, data=data.encode('utf-8'), method='POST')
-            return_df = request_list_worker(req, timeoutLen) if return_df.empty else return_df.append(request_list_worker(req, timeoutLen))
-            print("Extracted {}/{}".format(min(ii * nrows + nrows, numFound), numFound))
-        return return_df
-    except Exception as e:
-        print("Error(request_list): {}".format(e))
-        return request_list(request_key, numFound, timeoutLen)
 
 def srx_request_worker(srx):
     request_type, request_key = grab_requset_key(srx)
@@ -160,16 +98,15 @@ def checkpoint_make_or_load_srrUrl(dataset, tmp_dir, output_dir, maxThreadNum, t
         f.write("EOF\n")  ###5 characters
     return srrUrl_list
 
-def main_threading(srr_name, run_info):
+def main_threading(file_name, run_info):
     try:
         if run_info["dataLen"]:
-            print("Continue download {}: {}/{}".format(srr_name, run_info["finLen"], run_info["dataLen"]))
+            print("Continue download {}: {}/{}".format(file_name, run_info["finLen"], run_info["dataLen"]))
         else:
-            print("Begin download {} ...".format(srr_name))
-        #print(run_info)
-        srrUrl_split = run_info["srrUrl"].split("/", 3)
-        ftpServer = srrUrl_split[2]
-        remotePath = srrUrl_split[3].strip()
+            print("Begin download {} ...".format(file_name))
+        url_fragments = run_info["srrUrl"].split("/", 3)
+        ftpServer = url_fragments[2]
+        remotePath = url_fragments[3].strip()
         timeoutLen = run_info["timeoutLen"]
         ftp = FTP(host=ftpServer, timeout=timeoutLen)
         ftp.login()
@@ -185,62 +122,62 @@ def main_threading(srr_name, run_info):
             else:
                 run_info["cache"] += self
             if len(run_info["cache"]) >= run_info["cacheLen"] or run_info["finLen"] + len(run_info["cache"]) >= run_info["dataLen"]:
-                file_path = "{}/{}".format(run_info["save_dir"], srr_name)
+                file_path = "{}/{}".format(run_info["save_dir"], file_name)
                 f = open(file_path, "wb") if run_info["finLen"] == 0 else open(file_path, "ab")
                 f.write(run_info["cache"])
                 f.close()
                 run_info["finLen"] += len(run_info["cache"])
                 use_time_once = max(time.time() - run_info["last_time"], 1e-8)
-                print("wrinting {}\t{}/{} ({:.2%})\tSpeed: {}k/s"
-                      .format(file_path, run_info["finLen"], run_info["dataLen"],
-                              run_info["finLen"] / run_info["dataLen"],
-                              round(len(run_info["cache"]) / (1000 * use_time_once), 2)))
+                print("wrinting {}\t{}/{} ({:.2%})\tSpeed: {}k/s".format(file_path,
+                                                                         run_info["finLen"],
+                                                                         run_info["dataLen"],
+                                                                         run_info["finLen"] / run_info["dataLen"],
+                                                                         round(len(run_info["cache"]) / (1000 * use_time_once), 2)))
                 run_info["cache"] = ""
                 if os.path.getsize(file_path) != run_info["finLen"]:
                     os.remove(file_path)
                     run_info["finLen"] = 0
                     raise NameError(file_path, "Error: Inconsistent file and log")
-
-                with open("{}/{}.log".format(run_info["log_dir"], srr_name.split(".", 1)[0]), "w") as log_f:
-                    log_f.write("{}\t{}\t{}\n".format(srr_name, run_info["dataLen"], run_info["finLen"]))
+                with open("{}/{}.log".format(run_info["log_dir"], file_name.split(".", 1)[0]), "w") as log_f:
+                    log_f.write("{}\t{}\t{}\n".format(file_name, run_info["dataLen"], run_info["finLen"]))
                 run_info["last_time"] = time.time()
         ftp.retrbinary(cmd='RETR ' + remotePath, callback=ftp_callback, rest=run_info["finLen"])
         ftp.quit()
-        print("Finish: {} (Use {} seconds)".format(srr_name, round(time.time() - run_info["first_time"], 2)))
+        print("Finish: {} (Use {} seconds)".format(file_name, round(time.time() - run_info["first_time"], 2)))
     except Exception as e:
-        print("Error(main_threading of {}): {}".format(srr_name, e))
+        print("Error(main_threading of {}): {}".format(file_name, e))
         try:
             error_code = e.args[0].split(" ", 1)[0]
             if error_code == "450":
                 return  # no file
             elif error_code == "530":
                 time.sleep(60)
-                return main_threading(srr_name, run_info)
+                return main_threading(file_name, run_info)
             else:
                 print(e.args)
                 time.sleep(5)
-                return main_threading(srr_name, run_info)
+                return main_threading(file_name, run_info)
         except:
             time.sleep(5)
-            return main_threading(srr_name, run_info)
+            return main_threading(file_name, run_info)
 
 class ftpFileDownloadThread(threading.Thread):
     def __init__(self, run_item):
         threading.Thread.__init__(self)
         self.run_item = run_item
     def run(self):
-        srr_name, run_info = self.run_item
+        file_name, run_info = self.run_item
         run_info["last_time"] = time.time()
         run_info["first_time"] = run_info["last_time"]
-        main_threading(srr_name, run_info)
+        main_threading(file_name, run_info)
 
 def ftpFileDownload(srrUrl_dict_items, output_dir, maxThreadNum, timeoutLen, cacheLen):
     log_dir = "{}/tmp/downloadLog".format(output_dir)
     dataset, srrUrl_list = srrUrl_dict_items
     run_info_dict = {}
     for srrUrl in srrUrl_list:
-        srr_name = srrUrl.rsplit("/", 1)[1]
-        run_info_dict[srr_name] = {"dataLen": None,
+        file_name = srrUrl.rsplit("/", 1)[1]
+        run_info_dict[file_name] = {"dataLen": None,
                                    "finLen": 0,
                                    "last_time": time.time(),
                                    "srrUrl": srrUrl,
@@ -272,7 +209,6 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset", required=True, type=str, help="GSE96772,GSE110513,GSE75478")
     parser.add_argument("--out-dir", required=True, type=str, help="output folder")
-    parser.add_argument("--just-summary", required=False, type=bool, default=False, help="")
     parser.add_argument("--maxThreadNum", required=False, type=int, default=10, help="")
     parser.add_argument("--timeoutLen", required=False, type=int, default=30, help="")
     parser.add_argument("--cacheLen", required=False, type=int, default=512000, help="")
@@ -280,20 +216,15 @@ def main():
     dataset_list = FLAGS["dataset"].split(",")
     print("Dataset: {}".format(dataset_list))
     print("Output Dir: {}".format(FLAGS["out_dir"]))
-    if FLAGS["just_summary"]:
-        os.makedirs(FLAGS["out_dir"], exist_ok=True)
-        for dataset in dataset_list:
-            just_make_summary(dataset, FLAGS["out_dir"], FLAGS["maxThreadNum"], FLAGS["timeoutLen"])
-    else:
-        tmp_dir = FLAGS["out_dir"] + "/tmp"
-        os.makedirs(tmp_dir, exist_ok=True)
-        srrUrl_dict = {}
-        for index, dataset in enumerate(dataset_list):
-            output_dataset_dir = "{}/{}".format(FLAGS["out_dir"], dataset)
-            os.makedirs(output_dataset_dir, exist_ok=True)
-            srrUrl_dict[dataset] = checkpoint_make_or_load_srrUrl(dataset, tmp_dir, FLAGS["out_dir"], FLAGS["maxThreadNum"], FLAGS["timeoutLen"])
-        for srrUrl_dict_items in srrUrl_dict.items():
-            ftpFileDownload(srrUrl_dict_items, FLAGS["out_dir"], FLAGS["maxThreadNum"], FLAGS["timeoutLen"], FLAGS["cacheLen"])
+    tmp_dir = FLAGS["out_dir"] + "/tmp"
+    os.makedirs(tmp_dir, exist_ok=True)
+    srrUrl_dict = {}
+    for index, dataset in enumerate(dataset_list):
+        output_dataset_dir = "{}/{}".format(FLAGS["out_dir"], dataset)
+        os.makedirs(output_dataset_dir, exist_ok=True)
+        srrUrl_dict[dataset] = checkpoint_make_or_load_srrUrl(dataset, tmp_dir, FLAGS["out_dir"], FLAGS["maxThreadNum"], FLAGS["timeoutLen"])
+    for srrUrl_dict_items in srrUrl_dict.items():
+        ftpFileDownload(srrUrl_dict_items, FLAGS["out_dir"], FLAGS["maxThreadNum"], FLAGS["timeoutLen"], FLAGS["cacheLen"])
 
 
 if __name__ == "__main__":
