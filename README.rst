@@ -6,7 +6,7 @@ NCBI_spider
 .. |PyPI| image:: https://img.shields.io/pypi/v/NCBIspider.svg
     :target: https://pypi.org/project/ncbispider
 
-* Deprecated : the NCBI server seems not support resume so that this repository is useless
+* Deprecated : the NCBI server seems not supporting resume so that this repository is useless
 
 Installation
 ------------
