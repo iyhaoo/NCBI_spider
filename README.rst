@@ -6,7 +6,7 @@ NCBI_spider
 .. |PyPI| image:: https://img.shields.io/pypi/v/NCBIspider.svg
     :target: https://pypi.org/project/ncbispider
 
-* Free software: Apache License 2.0
+* Deprecated : the NCBI server seems not support resume so that this repository is useless
 
 Installation
 ------------
